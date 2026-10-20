@@ -23,7 +23,14 @@ jobs:
 
       - name: Build
         shell: pwsh
-        run: ./installer/build.ps1
+        run: |
+          $ok = $true
+          try { & ./installer/build.ps1 *>&1 | Tee-Object -FilePath build.log | Out-Host } catch { $_ | Out-File build.log -Append; $ok = $false }
+          if (-not $ok -or -not (Test-Path build/*.exe)) {
+            $tail = (Get-Content build.log -Tail 25) -join "%0A"
+            Write-Host "::error title=Build failed::$tail"
+            exit 1
+          }
 
       - uses: actions/upload-artifact@v4
         with:
