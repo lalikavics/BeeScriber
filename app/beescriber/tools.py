@@ -329,8 +329,12 @@ def _size(text: str) -> float:
 
 def pip_install(args: list[str], progress=None, cancelled=None, on_line=None) -> None:
     """pip install <args> into this Python. progress(got_bytes) is called while the wheels download."""
+    import sys
     cmd = [pip_python(), "-m", "pip", "install", "--disable-pip-version-check", "--no-input",
-           "--progress-bar", "raw"] + args
+           "--progress-bar", "raw"]
+    if list(Path(sys.executable).parent.glob("python3*._pth")):   # the installer's embedded Python: pip's isolated
+        cmd.append("--no-build-isolation")                         # build env does not work there (see build.ps1)
+    cmd += args
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
                          errors="replace", env=env(), **no_window())
     finished = cur = pending = 0.0
@@ -366,7 +370,7 @@ def pip_install(args: list[str], progress=None, cancelled=None, on_line=None) ->
     importlib.invalidate_caches()
 
 
-CUDA_PACKAGES = ["nvidia-cublas-cu12==12.*", "nvidia-cudnn-cu12==9.*"]
+CUDA_PACKAGES = ["nvidia-cublas-cu12==12.9.2.10", "nvidia-cudnn-cu12==9.27.0.42"]   # as tested with CTranslate2 4.8
 
 
 def cuda_libs_needed() -> bool:

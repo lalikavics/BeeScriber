@@ -95,10 +95,10 @@ def install(progress=None, cancelled=None, bytes_progress=None) -> None:
     progress(step, steps, label, line) for the add-on dialog; bytes_progress(got) for the first-start window."""
     if not can_install():
         raise RuntimeError("not supported in this build")
-    torch_args = ["torch", "torchaudio"]
+    torch_args = ["torch==2.11.0", "torchaudio==2.11.0"]               # as tested with pyannote.audio 4.0
     if shutil.which("nvidia-smi"):
         torch_args += ["--index-url", TORCH_INDEX_CUDA]
-    steps = [("PyTorch", torch_args), ("pyannote.audio", ["pyannote.audio"])]
+    steps = [("PyTorch", torch_args), ("pyannote.audio", ["pyannote.audio==4.0.7"])]
     base = 0.0
     for i, (label, args) in enumerate(steps, 1):
         if progress:

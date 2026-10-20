@@ -57,7 +57,7 @@ Name: "custom"; Description: "{cm:TypeCustom}"; Flags: iscustom
 
 [Components]
 Name: "main"; Description: "{cm:CompMain}"; Types: standard full custom; Flags: fixed
-Name: "speakers"; Description: "{cm:CompSpeakers}"; Types: full; ExtraDiskSpace: 5500000000
+Name: "speakers"; Description: "{cm:CompSpeakers}"; Types: full; ExtraDiskSpaceRequired: 5500000000
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
