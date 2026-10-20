@@ -1,0 +1,6 @@
+# Python packages bundled into the installer (Python 3.12, Windows x64).
+# The NVIDIA CUDA libraries and the optional speaker add-on are downloaded at the first start instead.
+faster-whisper==1.2.1
+pywebview==6.2.1
+reportlab
+python-docx

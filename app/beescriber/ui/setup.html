@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BeeScriber</title>
+<style>
+:root{--bg:#141619;--text:#ecedf0;--muted:#8f96a6;--line:#262a31;--acc:#0aa1d6;--acc2:#7fd6f2;--ok:#4ade80;--err:#f87171}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,"Segoe UI",Roboto,sans-serif;display:flex;align-items:center;justify-content:center;user-select:none;overflow:hidden}
+.wrap{width:100%;max-width:420px;padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center}
+img{width:52px;height:52px;border-radius:12px;margin-bottom:14px}
+.kicker{font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{margin:8px 0 22px;font-size:26px;font-weight:700;letter-spacing:-.3px}
+.bar{width:100%;height:6px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:6px;transition:width .35s}
+.meta{margin-top:12px;color:var(--muted);font-size:13px;display:flex;gap:10px;align-items:center;justify-content:center}
+.meta .sep{width:3px;height:3px;border-radius:50%;background:#444a55}
+#pct{color:#c7ccd6;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+#cur{margin-top:6px;color:var(--muted);font-size:12px;min-height:18px;font-variant-numeric:tabular-nums}
+ul{list-style:none;margin:18px 0 0;padding:0;width:100%;font-size:12.5px;color:var(--muted)}
+li{display:flex;justify-content:space-between;padding:3px 2px}
+li .s{min-width:16px}
+li.done{color:#b6bdc9}li.done .s{color:var(--ok)}
+li.act{color:var(--text)}li.act .s{color:var(--acc2)}
+#err{margin-top:16px;color:#ffc2c2;font-size:12.5px;white-space:pre-wrap;display:none;text-align:left;width:100%;background:#2a1717;border:1px solid #5a2a2a;border-radius:8px;padding:8px 10px}
+.btns{margin-top:22px;display:flex;gap:10px}
+button{background:none;border:0;color:var(--muted);font:inherit;cursor:pointer;padding:6px 12px;border-radius:7px}
+button:hover{color:var(--text);background:#1d2026}
+button.pri{background:var(--acc);color:#031018;font-weight:700}
+button.pri:hover{background:#2ab4e6;color:#031018}
+#bar{position:fixed;top:0;left:0;right:0;height:34px;display:flex;justify-content:flex-end}
+#bar button{width:44px;height:34px;padding:0;border-radius:0;display:flex;align-items:center;justify-content:center}
+#bar button svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1.1}
+#bar button.x:hover{background:#c42b1c;color:#fff}
+body{box-shadow:inset 0 0 0 1px #2c313b}
+</style>
+</head>
+<body>
+<div id="bar"><button type="button" id="bMin"><svg viewBox="0 0 10 10"><path d="M1 5.5h8"/></svg></button><button type="button" id="bClose" class="x"><svg viewBox="0 0 10 10"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7"/></svg></button></div>
+<div class="wrap">
+  <img src="logo.png" alt="">
+  <div class="kicker" id="kicker">Setup</div>
+  <h1 id="title">Downloading components…</h1>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="meta"><span id="pct">0%</span><span class="sep"></span><span id="once">This happens only once!</span></div>
+  <div id="cur"></div>
+  <ul id="list"></ul>
+  <div id="err"></div>
+  <div class="btns"><button id="retry" class="pri" type="button" hidden>Retry</button><button id="cancel" type="button">Cancel</button></div>
+</div>
+<script>
+'use strict';
+const T = {
+  en: {kicker: 'Setup', title: 'Downloading components…', once: 'This happens only once!', cancel: 'Cancel', retry: 'Retry',
+       done: 'Ready!', err: 'Download failed. Check the internet connection and try again.', starting: 'Starting…'},
+  hu: {kicker: 'Telepítés', title: 'Összetevők letöltése…', once: 'Ez csak egyszer történik meg!', cancel: 'Mégse', retry: 'Újra',
+       done: 'Kész!', err: 'A letöltés nem sikerült. Ellenőrizd az internetkapcsolatot, és próbáld újra.', starting: 'Indul…'}};
+let L = T.en, ITEMS = [];
+const $ = s => document.querySelector(s);
+const mb = b => (b / 1e6).toFixed(0);
+function list(activeId) {
+  const ul = $('#list'); ul.innerHTML = '';
+  let seen = false;
+  for (const it of ITEMS) {
+    const li = document.createElement('li');
+    const isAct = it.id === activeId, isDone = it.done;
+    if (isAct) seen = true;
+    li.className = isDone ? 'done' : isAct ? 'act' : '';
+    const a = document.createElement('span'); a.textContent = it.label;
+    const b = document.createElement('span'); b.className = 's'; b.textContent = isDone ? '✓' : isAct ? '↓' : `~${it.mb} MB`;
+    li.append(a, b); ul.append(li);
+  }
+}
+window.setupEvent = e => {
+  if (e.type === 'item') { ITEMS.forEach(i => { if (i.active && i.id !== e.id) i.done = true; i.active = i.id === e.id; }); list(e.id); $('#cur').textContent = e.label + ' – ' + L.starting; }
+  else if (e.type === 'progress') {
+    $('#bar').style.width = e.pct.toFixed(1) + '%';
+    $('#pct').textContent = Math.floor(e.pct) + '%';
+    $('#cur').textContent = `${e.label} – ${mb(e.got)} / ${mb(e.total)} MB`;
+  } else if (e.type === 'done') {
+    ITEMS.forEach(i => i.done = true); list(null);
+    $('#bar').style.width = '100%'; $('#pct').textContent = '100%'; $('#title').textContent = L.done; $('#cur').textContent = '';
+  } else if (e.type === 'error') {
+    $('#err').style.display = 'block'; $('#err').textContent = L.err + '\n\n' + e.detail;
+    $('#retry').hidden = false;
+  }
+};
+async function boot() {
+  const info = await window.pywebview.api.info();
+  L = T[info.lang] || T.en;
+  document.title = info.app;
+  for (const id of ['kicker', 'title', 'once', 'cancel', 'retry']) $('#' + id).textContent = L[id];
+  ITEMS = info.items.map(i => Object.assign({}, i));
+  list(null);
+  $('#cancel').onclick = () => window.pywebview.api.cancel();
+  $('#bClose').onclick = () => window.pywebview.api.cancel();
+  $('#bMin').onclick = () => window.pywebview.api.win_min();
+  document.addEventListener('mousedown', e => { if (e.button === 0 && !e.target.closest('button')) window.pywebview.api.win_drag(); });
+  $('#retry').onclick = () => { $('#err').style.display = 'none'; $('#retry').hidden = true; window.pywebview.api.start(); };
+  window.pywebview.api.start();
+}
+if (window.pywebview && window.pywebview.api && window.pywebview.api.info) boot();
+else window.addEventListener('pywebviewready', boot, {once: true});
+</script>
+</body>
+</html>

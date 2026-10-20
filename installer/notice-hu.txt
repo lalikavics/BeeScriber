@@ -1,0 +1,23 @@
+﻿BeeScriber – ingyenes, helyben futó átíró program Windowsra
+Készítette: Lalikavics. Szabad szoftver, GNU GPL v3.0 licenc.
+
+MI KIÉ
+A szerző munkája kizárólag maga a program (a forráskódja, a kezelőfelülete, a neve és a logója). A beszédfelismerő és beszélőfelismerő modellek (Whisper, pyannote), valamint a felhasznált könyvtárak és eszközök (faster-whisper, CTranslate2, yt-dlp, FFmpeg, Deno, PyTorch és mások) nem a BeeScriber részei, és nem a szerzője készítette őket. A program a hivatalos forrásukból tölti le őket; a szerzőik tulajdonát képezik, és a saját licencük és feltételeik szerint használhatók. Minden videó, hangfájl és átirat, amelyet feldolgozol, a saját jogosultjaié.
+
+FÜGGETLEN PROJEKT
+A BeeScriber nem áll kapcsolatban a YouTube-bal, a Google-lel, az OpenAI-jal, a Hugging Face-szel, a pyannote-tal vagy más céggel, és ők nem is támogatják; a nevük és védjegyeik a tulajdonosaiké.
+
+A TE FELELŐSSÉGED
+Te döntöd el, mit írsz át és hogyan használod fel az eredményt, és ezért egyedül te felelsz. A programot csak olyan tartalomhoz használd, amelynek a felhasználására jogosult vagy, és tartsd be a szerzői jogot, a használt oldalak (köztük a YouTube) felhasználási feltételeit és az adatvédelmi szabályokat. Az átiratok és a beszélők jelölése a megszólalók személyes adatait tartalmazhatják.
+
+AZ ADATAID
+Nincs telemetria, a program semmit nem gyűjt. A beállítások, az előzmények, az átiratok, a sütik és a hozzáférési kulcsok csak ezen a gépen tárolódnak.
+
+PONTOSSÁG
+A gépi átirat és a beszélők jelölése tartalmazhat hibát. Mielőtt támaszkodsz rá vagy közzéteszed, ellenőrizd.
+
+NINCS GARANCIA, NINCS FELELŐSSÉG
+A program ingyenes, és „ahogy van” alapon, mindenféle garancia nélkül érhető el. A jogszabályok által megengedett legteljesebb mértékben a szerző nem felel semmilyen kárért, adatvesztésért vagy jogi következményért, amely a program, a külső modellek és eszközök, illetve a velük feldolgozott tartalom használatából ered (GNU GPL v3.0, 15–17. pont).
+
+MI TÖRTÉNIK EZUTÁN
+A telepítő bemásolja a programot (a saját Pythonjával – mást nem kell telepítened). Az első indításkor a BeeScriber egyszer, egy folyamatjelzővel letölti a többi összetevőt: yt-dlp, FFmpeg, Deno, a Whisper large-v3-turbo modell (1,6 GB), és NVIDIA videókártya esetén a CUDA-könyvtárak (kb. 1,3 GB).
