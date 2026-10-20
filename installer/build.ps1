@@ -28,7 +28,11 @@ $zip = ($pth.BaseName) + ".zip"
 Invoke-WebRequest "https://bootstrap.pypa.io/get-pip.py" -OutFile "$build\get-pip.py"
 & "$py\python.exe" "$build\get-pip.py" --no-warn-script-location
 if ($LASTEXITCODE) { throw "get-pip failed" }
-& "$py\python.exe" -m pip install --no-warn-script-location --disable-pip-version-check -r "$PSScriptRoot\requirements.txt"
+# a few dependencies are source-only (e.g. proxy_tools); the embedded Python cannot use pip's isolated build
+# environment (its ._pth file fixes sys.path), so the build tools are installed first and isolation is turned off
+& "$py\python.exe" -m pip install --no-warn-script-location --disable-pip-version-check setuptools wheel
+if ($LASTEXITCODE) { throw "pip install setuptools failed" }
+& "$py\python.exe" -m pip install --no-warn-script-location --disable-pip-version-check --no-build-isolation -r "$PSScriptRoot\requirements.txt"
 if ($LASTEXITCODE) { throw "pip install failed" }
 
 # 3. Microsoft C++ runtime DLLs used by CTranslate2 / onnxruntime (in case the PC has no VC++ redistributable)
