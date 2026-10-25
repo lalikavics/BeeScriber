@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+/build/
+/tools/
+/devtest/
+/docs/
+*.exe
+install.json
+.vscode/
+.idea/

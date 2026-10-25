@@ -1,0 +1,24 @@
+﻿BeeScriber - free, local transcription for Windows
+Created by Lalikavics. Developed with the help of Claude (Anthropic).
+Free software under the GNU GPL v3.0.
+
+WHAT BELONGS TO WHOM
+Only the program itself (its source code, user interface, name and logo) is the work of the author. The speech recognition and speaker models (Whisper, pyannote), the libraries and the tools it uses (faster-whisper, CTranslate2, yt-dlp, FFmpeg, Deno, PyTorch and others) are not part of BeeScriber and were not made by its author. They are downloaded from their official sources, belong to their authors and are used under their own licences and terms. Every video, audio file and transcript you process belongs to its own rights holders.
+
+INDEPENDENT PROJECT
+BeeScriber is not affiliated with, sponsored or endorsed by YouTube, Google, OpenAI, Hugging Face, pyannote or any other company; their names and trademarks belong to their owners.
+
+YOUR RESPONSIBILITY
+You decide what you transcribe and how you use the results, and you alone are responsible for it. Use the program only for content you have the right to use, and comply with copyright law, the terms of service of the sites you use (including YouTube's) and data protection law. Transcripts and speaker labels may contain personal data of the people speaking.
+
+YOUR DATA
+No telemetry, nothing is collected. Settings, history, transcripts, cookies and access keys are stored only on this computer.
+
+ACCURACY
+Automatic transcripts and speaker labels can contain errors. Check them before you rely on them or publish them.
+
+NO WARRANTY, NO LIABILITY
+The program is provided free of charge, "as is", without warranty of any kind. To the fullest extent permitted by law, the author is not liable for any damage, loss of data or legal consequence arising from its use, from the third-party models and tools, or from the content processed with them (GNU GPL v3.0, sections 15-17).
+
+WHAT HAPPENS NEXT
+The installer copies the program (with its own Python - you do not need to install anything else). At the first start BeeScriber downloads the remaining components once, with one progress bar: yt-dlp, FFmpeg, Deno, the Whisper large-v3-turbo model (1.6 GB) and, with an NVIDIA graphics card, the CUDA libraries (about 1.3 GB).

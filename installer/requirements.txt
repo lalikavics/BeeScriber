@@ -1,0 +1,9 @@
+# Python packages bundled into the installer (Python 3.12, Windows x64).
+# The NVIDIA CUDA libraries and the optional speaker add-on are downloaded at the first start instead.
+# Versions as tested on Windows 11 + RTX 3060 Ti.
+faster-whisper==1.2.1
+ctranslate2==4.8.3
+huggingface-hub==2.2.0
+pywebview==6.2.1
+reportlab==5.0.1
+python-docx==1.2.0
