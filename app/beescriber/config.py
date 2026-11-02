@@ -10,7 +10,7 @@ from pathlib import Path
 
 APP_NAME = "BeeScriber"
 APP_ID = "beescriber"                 # folder / file names, never shown to the user
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 AUTHOR = "Lalikavics"
 COFFEE_URL = "https://buymeacoffee.com/lalikavics"
 REPO_URL = "https://github.com/lalikavics/BeeScriber"

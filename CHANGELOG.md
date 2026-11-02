@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1] - 2026-11-02
+
+- YouTube "Sign in to confirm you're not a bot": the queue pauses and keeps the video with its progress, and a dialog asks for confirmation. "Open YouTube" opens YouTube in its own window; after signing in, "Done – continue" saves the YouTube sign-in on this computer and the queue continues where it stopped. Also works when loading a playlist.
+- With speaker recognition on, the audio is kept while transcribing, so YouTube is not asked for it a second time.
+- Retrying or continuing a video now also starts the queue.
+- Starting BeeScriber again while it is open brings the open window to the front instead of leaving it looking frozen.
+
 ## [1.0.0] - 2026-10-25
 
 First public release.

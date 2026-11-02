@@ -11,7 +11,7 @@ using System.Windows.Forms;
 [assembly: System.Reflection.AssemblyTitle("BeeScriber")]
 [assembly: System.Reflection.AssemblyProduct("BeeScriber")]
 [assembly: System.Reflection.AssemblyCompany("Lalikavics")]
-[assembly: System.Reflection.AssemblyVersion("1.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1.0")]
 
 static class BeeScriberLauncher
 {
