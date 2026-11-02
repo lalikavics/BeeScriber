@@ -137,6 +137,22 @@ class Chrome:
         self._on_ui(lambda: ctypes.windll.user32.ShowWindow(self.hwnd, SW_MAXIMIZE if want_max else SW_RESTORE))
         return want_max
 
+    def bring_to_front(self) -> None:
+        """Called when BeeScriber is started a second time: show this window (restore it if minimised) and
+        activate it. Runs on the window's own UI thread; the second process only signals (see app.py)."""
+        def go():
+            u32 = ctypes.windll.user32
+            if not self.hwnd:
+                return
+            if u32.IsIconic(self.hwnd):
+                u32.ShowWindow(self.hwnd, SW_RESTORE)
+            try:
+                self.window.native.Activate()
+            except Exception:  # noqa: BLE001
+                pass
+            u32.SetForegroundWindow(self.hwnd)
+        self._on_ui(go)
+
     def minimize(self) -> None:
         if self.hwnd:
             self._on_ui(lambda: ctypes.windll.user32.ShowWindow(self.hwnd, SW_MINIMIZE))

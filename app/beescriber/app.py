@@ -72,6 +72,8 @@ class Api:
         self._last_clip = None
         self._chrome = None
         self._queue = JobQueue(settings, pump.push)
+        from .ytlogin import YouTubeLogin
+        self._yt = YouTubeLogin()
 
     # ------------------------------------------------------------ helpers
     def _w(self):
@@ -222,6 +224,29 @@ class Api:
         kind = getattr(getattr(webview, "FileDialog", None), "OPEN", None) or webview.OPEN_DIALOG
         res = self._w().create_file_dialog(kind, file_types=("Cookies file (*.txt)", "All files (*.*)"))
         return res[0] if res else None
+
+    # ------------------------------------------------------------ YouTube confirmation ("not a bot")
+    def yt_verify_open(self, title=None):
+        return self._yt.open(str(title or f"YouTube – {config.APP_NAME}"))
+
+    def yt_verify_done(self, resume=True):
+        """Saves the YouTube cookies from the window, switches yt-dlp to them and continues the queue."""
+        r = self._yt.save()
+        if r.get("ok"):
+            self._settings.update({"cookies_mode": "file", "cookies_file": r["path"]})
+            r["settings"] = self._settings.all()
+            if resume:
+                for j in self._queue.jobs():
+                    if j["status"] == "error" and j.get("error_code") == "bot":
+                        self._queue.retry(j["id"])
+                if any(j["status"] == "queued" for j in self._queue.jobs()):
+                    self._queue.start()
+            r["state"] = self._queue.state()
+        return r
+
+    def yt_verify_close(self):
+        self._yt.close()
+        return True
 
     # ------------------------------------------------------------ queue
     def enqueue(self, items, collection=None, start=False):
@@ -462,6 +487,7 @@ def main() -> None:
 
         def before_show():
             api._chrome = _attach_chrome(window)
+            holder["chrome"] = api._chrome
 
         def closing():
             try:
@@ -498,6 +524,7 @@ def main() -> None:
 
         def setup_chrome():
             sapi._chrome = _attach_chrome(sw)
+            holder["chrome"] = sapi._chrome
         _on(sw, ("before_show", "shown"), setup_chrome)
     else:
         open_main()
@@ -505,6 +532,8 @@ def main() -> None:
     # (with a kept cache WebView2 could serve the previous version's style.css / app.js). The app keeps nothing
     # in browser storage - settings and history are in its own files.
     shutil.rmtree(config.DATA_DIR / "webview", ignore_errors=True)        # cache folder of earlier versions
+    if config.IS_WIN:
+        _listen_for_second_start(holder)
     webview.start(gui="edgechromium" if config.IS_WIN else None, private_mode=True,
                   debug=bool(os.environ.get("BEESCRIBER_DEBUG")))
     if "api" in holder:
@@ -515,21 +544,49 @@ _MUTEX = None
 
 
 def _single_instance() -> bool:
-    """Only one BeeScriber at a time (two would share the queue). A second start brings the first to the front."""
+    """Only one BeeScriber at a time (two would share the queue). A second start only signals the running one,
+    which brings its own window to the front. (Touching the other process's window from here - finding it by
+    title and activating it - could pick one of WebView2's hidden windows and leave the app looking frozen.)"""
     global _MUTEX
     import ctypes
-    k32, u32 = ctypes.windll.kernel32, ctypes.windll.user32
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
     k32.CreateMutexW.restype = ctypes.c_void_p
+    k32.OpenEventW.restype = ctypes.c_void_p
     _MUTEX = k32.CreateMutexW(None, False, f"Local\\{config.APP_ID}-single-instance")
-    if k32.GetLastError() != 183:                       # ERROR_ALREADY_EXISTS
+    if ctypes.get_last_error() != 183:                   # ERROR_ALREADY_EXISTS
         return True
-    hwnd = u32.FindWindowW(None, config.APP_NAME)
-    if hwnd:
-        if u32.IsIconic(hwnd):
-            u32.ShowWindow(hwnd, 9)                     # SW_RESTORE (only if minimised)
-        u32.SetForegroundWindow(hwnd)
-    log.info("already running - brought the open window to the front")
+    ctypes.windll.user32.AllowSetForegroundWindow(-1)    # ASFW_ANY: the running app may take the foreground
+    ev = k32.OpenEventW(0x0002, False, _ACTIVATE_EVENT)  # EVENT_MODIFY_STATE
+    if ev:
+        k32.SetEvent(ctypes.c_void_p(ev))
+        k32.CloseHandle(ctypes.c_void_p(ev))
+    log.info("already running - asked the open window to come to the front")
     return False
+
+
+_ACTIVATE_EVENT = f"Local\\{config.APP_ID}-activate"
+
+
+def _listen_for_second_start(holder: dict) -> None:
+    """Waits (in a background thread) for the signal of a second start and brings the current window forward."""
+    import ctypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateEventW.restype = ctypes.c_void_p
+    ev = k32.CreateEventW(None, False, False, _ACTIVATE_EVENT)     # auto-reset
+    if not ev:
+        return
+
+    def run():
+        while True:
+            if k32.WaitForSingleObject(ctypes.c_void_p(ev), ctypes.c_uint32(0xFFFFFFFF)) != 0:
+                return
+            ch = holder.get("chrome")
+            if ch:
+                try:
+                    ch.bring_to_front()
+                except Exception as e:  # noqa: BLE001
+                    log.debug("bring to front: %s", e)
+    threading.Thread(target=run, daemon=True, name="second-start").start()
 
 
 def _on(window, names, fn) -> None:

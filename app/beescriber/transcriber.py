@@ -95,6 +95,7 @@ def transcribe(item: dict, engine, journal: Journal, settings, emit=None, should
     if duration and pos >= duration - 0.5:
         return {"segs": segs_all, "lang": lang, "pos": pos, "duration": duration}
 
+    FATAL_STREAM = ("bot", "private", "members", "age", "cookies", "unavailable")
     attempts = 0
     t_start = time.time()
     audio_done = 0.0
@@ -186,6 +187,10 @@ def transcribe(item: dict, engine, journal: Journal, settings, emit=None, should
             stream.close()
 
         nothing_yet = not got_audio and not segs_all and pos == 0
+        if not got_audio and item["kind"] != "file":
+            code = sources.classify_error(errors)
+            if code in FATAL_STREAM:                              # e.g. bot check while resuming: retrying won't help
+                raise TranscribeError(code, errors)
         if nothing_yet:
             code = sources.classify_error(errors)
             if item["kind"] == "file" or code not in ("network", "unknown", "forbidden") or attempts >= 3:

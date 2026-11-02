@@ -192,7 +192,9 @@ function loadingRow() {
     el('div', {}, el('b', {text: t('loadingList')}), el('div', {class: 'hint', text: S.loadingText || ''})));
 }
 function addResult(r) {
-  for (const er of r.errors || []) toast(`${er.input}\n${errText(er)}`, 'err');
+  const bot = (r.errors || []).filter(er => er.error === 'bot');
+  for (const er of (r.errors || []).filter(er => er.error !== 'bot')) toast(`${er.input}\n${errText(er)}`, 'err');
+  if (bot.length) verifyDialog(bot.map(er => er.input).join('\n'));
   let added = 0;
   for (const c of r.collections || []) {
     if (c.type === 'files') {                        // files go into one shared collection
@@ -648,7 +650,7 @@ function modal(title, body, buttons) {
   $('#modal').classList.remove('about'); $('#modal').classList.add('open');
   mb.querySelectorAll('a[data-url]').forEach(a => a.onclick = e => { e.preventDefault(); api('open_url', a.dataset.url); });
 }
-function closeModal() { DIAR = null; $('#modal').classList.remove('open', 'about'); if (closeModal.resolve) { closeModal.resolve(false); closeModal.resolve = null; } }
+function closeModal() { DIAR = null; VERIFY = null; $('#modal').classList.remove('open', 'about'); if (closeModal.resolve) { closeModal.resolve(false); closeModal.resolve = null; } }
 function confirmBox(title, text) {
   return new Promise(res => {
     modal(title, el('p', {text}), [{label: t('cancel'), fn: () => { closeModal.resolve = null; res(false); }},
@@ -759,6 +761,7 @@ function handle(e) {
       if (e.status === 'unavailable' && !S.spkWarned) { S.spkWarned = true; toast(t('spkUnavailable'), 'err'); }
       break;
     case 'history': loadHistory(); break;
+    case 'verify': verifyDialog(null); break;
   }
 }
 
@@ -824,6 +827,40 @@ function diarDialog(enableAfter) {
         save({diarize: true}); DIAR = null;
       }}]);
   });
+}
+
+/* ---------------------------------------------------------------- YouTube confirmation ("not a bot") */
+let VERIFY = null;
+function verifyDialog(reloadText) {
+  if (VERIFY) { if (reloadText) VERIFY.reload = reloadText; return; }   // already open
+  VERIFY = {reload: reloadText || null, opened: false};
+  const msg = el('div', {class: 'hint'});
+  const openBtn = el('button', {class: 'btn pri', type: 'button', text: t('vOpen')});
+  const box = el('div', {class: 'diar'},
+    el('p', {text: t('vText')}),
+    el('ol', {}, el('li', {text: t('vStep1')}), el('li', {text: t('vStep2')}), el('li', {text: t('vStep3')})),
+    el('p', {class: 'hint', text: t('vNote')}),
+    el('div', {class: 'row'}, openBtn), msg);
+  openBtn.onclick = () => { VERIFY.opened = true; api('yt_verify_open', t('vWinTitle')); msg.textContent = t('vOpened'); msg.className = 'hint'; };
+  modal(t('vTitle'), box, [
+    {label: t('cancel'), fn: () => { api('yt_verify_close'); VERIFY = null; }},
+    {label: t('vDone'), cls: 'pri', fn: () => {
+      if (!VERIFY.opened) { msg.textContent = t('vOpenFirst'); msg.className = 'hint errline'; return false; }
+      msg.textContent = t('vSaving'); msg.className = 'hint';
+      api('yt_verify_done', true).then(r => {
+        if (!r || !r.ok) {
+          msg.textContent = t('v_' + ((r && r.code) || 'failed')); msg.className = 'hint errline';
+          if (r && r.code === 'no_window') VERIFY.opened = false;
+          return;
+        }
+        if (r.settings) { SET = r.settings; renderSettings(); }
+        if (r.state) { S.state = r.state; renderStatus(); renderQueueHead(); }
+        const again = VERIFY.reload; VERIFY = null; closeModal();
+        toast(t('vSaved'));
+        if (again) loadSources(again);
+      });
+      return false;                                       // the dialog closes when the cookies are saved
+    }}]);
 }
 
 /* ---------------------------------------------------------------- own window frame */

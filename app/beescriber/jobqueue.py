@@ -363,6 +363,13 @@ class JobQueue:
                           wall=(job.get("wall") or 0) + time.time() - t0)
             return
         except (TranscribeError, sources.SourceError) as e:
+            if e.code == "bot":
+                # YouTube wants proof of a real user: keep the video (and its finished part) in the queue,
+                # pause, and let the user confirm in the YouTube window; then the queue goes on from here
+                self._set(jid, status="queued", pos=journal.load()[0], wall=(job.get("wall") or 0) + time.time() - t0)
+                self.pause_all(now=False)
+                self.emit("verify", reason="bot", id=jid)
+                return
             self._set(jid, status="error", error_code=e.code, error=e.detail, pos=journal.load()[0],
                       wall=(job.get("wall") or 0) + time.time() - t0)
             return

@@ -322,6 +322,47 @@ def t_queue(tmp: Path) -> None:
     q.close()
 
 
+def t_bot(tmp: Path) -> None:
+    print("YouTube botellenőrzés: a sor megáll, a videó és a haladás megmarad")
+    from .jobqueue import JobQueue
+    from . import ytlogin
+    st = S(output_dir=str(tmp / "bout"), formats=["txt"], window_seconds=300, tail_seconds=15, language="en",
+           punct_guard=True, pause_after_video=False)
+    bot = "ERROR: [youtube] x: Sign in to confirm you're not a bot"
+    FakeStream.total, FakeStream.plan = 400.0, [(400.0, 130.0, bot)] * 12
+    events = []
+    q = JobQueue(st, lambda ev, **d: events.append(ev), db_path=tmp / "b.db", jobs_dir=tmp / "bjobs",
+                 engine_factory=lambda status: FakeEngine(), stream_factory=FakeStream)
+    ids = q.add([{"kind": "url", "source": "https://www.youtube.com/watch?v=botbotbot01", "video_id": "botbotbot01",
+                  "title": "B", "duration": 400.0, "index": 1}])
+    q.start()
+    t0 = time.time()
+    while time.time() - t0 < 20 and "verify" not in events:
+        time.sleep(0.05)
+    time.sleep(0.3)
+    j = q.jobs()[0]
+    check("verify" in events and not q.state()["running"], "megerősítést kér, a sor szünetel")
+    check(j["status"] == "queued" and j["pos"] > 0, f"a videó a sorban marad a haladással ({j['status']}, {j['pos']:.0f} mp)")
+    FakeStream.plan = []
+    q.start()
+    t0 = time.time()
+    while time.time() - t0 < 20 and (q.state()["running"] or q.current is not None):
+        time.sleep(0.05)
+    check(ids[0] in {x["id"] for x in q.jobs(history=True)}, "megerősítés után ott folytatja és befejezi")
+    q.close()
+    from http.cookies import SimpleCookie
+    import http.cookiejar
+    c = SimpleCookie()
+    c["SAPISID"] = "a/b"
+    c["SAPISID"]["domain"], c["SAPISID"]["path"], c["SAPISID"]["secure"] = ".youtube.com", "/", True
+    c["SAPISID"]["expires"] = "Tue, 02 Nov 2077 10:00:00 GMT"
+    f = tmp / "ck.txt"
+    f.write_text(ytlogin.to_netscape(ytlogin._flatten([c])), encoding="utf-8")
+    jar = http.cookiejar.MozillaCookieJar(str(f))
+    jar.load(ignore_discard=True)
+    check([x.name for x in jar] == ["SAPISID"], "YouTube-sütik mentése cookies.txt formában")
+
+
 def main() -> int:
     tmp = Path(tempfile.mkdtemp(prefix="beescriber-test-"))
     try:
@@ -338,6 +379,7 @@ def main() -> int:
         t_dialog_filters()
         t_speakers(tmp)
         t_queue(tmp)
+        t_bot(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("\n" + ("MINDEN TESZT RENDBEN" if not FAILS else f"HIBÁS: {len(FAILS)} -> " + json.dumps(FAILS, ensure_ascii=False)))
