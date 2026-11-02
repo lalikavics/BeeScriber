@@ -88,6 +88,9 @@ def transcribe(item: dict, engine, journal: Journal, settings, emit=None, should
 
     pos, segs_all, lang = journal.load()
     lang = forced or lang
+    # the speaker step needs the whole audio: keep it while transcribing (only for a run from the start), so
+    # YouTube is not asked for the same audio a second time
+    capture = bytearray() if want_words and pos == 0 else None
     prev_text = " ".join(s["text"].strip() for s in segs_all[-40:])
     prompt = textfmt.choose_prompt(prev_text, lang) if segs_all else ""
     if segs_all:
@@ -173,6 +176,8 @@ def transcribe(item: dict, engine, journal: Journal, settings, emit=None, should
                 new_pos = pos + cut_b / SR_BYTES
                 journal.append(new_pos, accepted, lang)            # saved before anything else moves
                 segs_all += accepted
+                if capture is not None:
+                    capture += buf.peek(cut_b)
                 buf.consume(cut_b)
                 pos = new_pos
                 audio_done += cut_b / SR_BYTES
@@ -208,4 +213,5 @@ def transcribe(item: dict, engine, journal: Journal, settings, emit=None, should
             if r:
                 raise Stop(r)
             time.sleep(0.5)
-    return {"segs": segs_all, "lang": lang, "pos": pos, "duration": duration or pos}
+    return {"segs": segs_all, "lang": lang, "pos": pos, "duration": duration or pos,
+            "pcm": bytes(capture) if capture else None}

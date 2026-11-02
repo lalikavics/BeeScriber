@@ -361,6 +361,12 @@ def t_bot(tmp: Path) -> None:
     jar = http.cookiejar.MozillaCookieJar(str(f))
     jar.load(ignore_discard=True)
     check([x.name for x in jar] == ["SAPISID"], "YouTube-sütik mentése cookies.txt formában")
+    st2 = S(window_seconds=300, tail_seconds=15, language="en", punct_guard=True, diarize=True)
+    FakeStream.total, FakeStream.plan = 200.0, []
+    res = transcribe({"kind": "url", "source": "x", "duration": 200.0}, FakeEngine(), Journal(99, tmp), st2,
+                     stream_factory=FakeStream)
+    check(res.get("pcm") and len(res["pcm"]) == int(200 * 16000) * 2,
+          "beszélő-lépéshez a hang megmarad (nem kéri le újra a YouTube-ról)")
 
 
 def main() -> int:

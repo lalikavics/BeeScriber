@@ -268,7 +268,9 @@ class Api:
         return True
 
     def job_resume(self, job_id):
+        """Retry (failed) or continue (paused) one video - and start the queue, so it really runs now."""
         self._queue.resume_job(int(job_id))
+        self._queue.start()
         return True
 
     def job_remove(self, ids):
@@ -285,6 +287,8 @@ class Api:
             if j["status"] == "error":
                 self._queue.retry(j["id"])
                 n += 1
+        if n:
+            self._queue.start()
         return n
 
     def jobs(self):

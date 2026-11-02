@@ -235,7 +235,7 @@ class JobQueue:
         segs = Journal(job_id, self.jobs_dir).load()[1]
         return diarize.apply(segs, diarize.load(job_id, self.jobs_dir))
 
-    def _speakers(self, jid: int, job: dict, segs: list[dict]) -> list[dict]:
+    def _speakers(self, jid: int, job: dict, segs: list[dict], pcm: bytes | None = None) -> list[dict]:
         """Optional speaker step (pyannote). Any failure leaves the transcript without speaker names."""
         from . import audio, diarize
         if not diarize.installed() or not diarize.token_get():
@@ -243,7 +243,8 @@ class JobQueue:
             return segs
         try:
             self.emit("speakers", id=jid, status="running")
-            pcm = audio.read_all(job["kind"], job["source"], self.settings, self._should_stop)
+            if not pcm:                                     # resumed run: the audio is fetched once more
+                pcm = audio.read_all(job["kind"], job["source"], self.settings, self._should_stop)
             n = int(self.settings.get("speakers") or 0) or None
             turns = diarize.Diarizer.run(pcm, n)
             del pcm
@@ -255,6 +256,12 @@ class JobQueue:
             return spk_segs
         except Stop:
             raise
+        except sources.SourceError as e:
+            if e.code == "bot":
+                raise                                       # handled like any bot check: pause and confirm
+            log.error("speaker step failed: %s", traceback.format_exc())
+            self.emit("speakers", id=jid, status="error", error=str(e)[-400:])
+            return segs
         except Exception as e:  # noqa: BLE001
             log.error("speaker step failed: %s", traceback.format_exc())
             self.emit("speakers", id=jid, status="error", error=str(e)[-400:])
@@ -384,7 +391,12 @@ class JobQueue:
         segs = res["segs"]
         if self.settings.get("diarize"):
             try:
-                segs = self._speakers(jid, job, segs)
+                segs = self._speakers(jid, job, segs, res.get("pcm"))
+            except sources.SourceError:                     # bot check while fetching the audio again
+                self._set(jid, status="queued", wall=wall)
+                self.pause_all(now=False)
+                self.emit("verify", reason="bot", id=jid)
+                return
             except Stop as s:
                 self._set(jid, status="paused" if s.reason == "pause_job" else "queued", wall=wall)
                 return
